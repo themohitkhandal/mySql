@@ -2,117 +2,159 @@
  * Sample React Native App
  * https://github.com/facebook/react-native
  *
+ * Generated with the TypeScript template
+ * https://github.com/react-native-community/react-native-template-typescript
+ *
  * @format
  */
-
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
+  Alert,
+  Button,
   SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   useColorScheme,
   View,
 } from 'react-native';
-
 import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+  getDBConnection,
+  createTable,
+  insertData,
+  retrieveData,
+  deleteItem,
+  deleteTable,
+} from './src/service/db-service';
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
-function Section({children, title}: SectionProps): React.JSX.Element {
+const App = () => {
   const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+  const [text, onChangeText] = React.useState('');
+  const [data, setData] = React.useState([]);
+  const [number, onChangeNumber] = React.useState('');
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+  const loadDataCallback = useCallback(async () => {
+    try {
+      const db = await getDBConnection();
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+      console.log('DB ', db);
+      await createTable(db);
+    } catch (error) {
+      console.error('ERROR: ', error);
+    }
+  }, []);
+  useEffect(() => {
+    loadDataCallback();
+  }, [loadDataCallback]);
+
+  const saveData = async () => {
+    if (text.length == 0) {
+      Alert.alert('Warning', 'Please write your data.');
+    } else {
+      try {
+        const db = await getDBConnection();
+        const jsonData = {
+          email: 'support@autope.in',
+          mobile: '0124-4842222',
+          time: 'Mon - Fri (10Am - 6Pm)',
+        };
+
+        // Convert JSON object to string
+        const jsonString = JSON.stringify(jsonData);
+        console.log(jsonString);
+        insertData(db, jsonString);
+      } catch (error) {
+        console.error('Error inserting data');
+      }
+    }
+  };
+
+  const getData = async () => {
+    const db = await getDBConnection();
+    const data = await retrieveData(db);
+    console.log('Retrieved Data: ', data);
+    setData(data);
+  };
+
+  const deleteData = async () => {
+    const db = await getDBConnection();
+    await deleteItem(db);
+    setData('');
   };
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
+    <SafeAreaView>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <View style={styles.container}>
+        <Text style={{fontSize: 20}}>Enter Data: </Text>
+        <TextInput
+          style={styles.input}
+          onChangeText={onChangeText}
+          value={text}
+        />
+        <Button
+          onPress={saveData}
+          title="Save Data"
+          color="#841584"
+          accessibilityLabel="save json data"
+        />
+        <Button
+          onPress={getData}
+          title="Get Data"
+          color="#841584"
+          accessibilityLabel="save json data"
+        />
+        <Button
+          onPress={deleteData}
+          title="Delete Data"
+          color="#841584"
+          accessibilityLabel="save json data"
+        />
+        {data && (
+          <View>
+            <Text>Retrieved Data: {JSON.stringify(data)}</Text>
+          </View>
+        )}
+      </View>
     </SafeAreaView>
   );
-}
-
+};
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  container: {
+    paddingHorizontal: 20,
   },
-  sectionTitle: {
+  appTitleView: {
+    marginTop: 20,
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  appTitleText: {
     fontSize: 24,
-    fontWeight: '600',
+    fontWeight: '800',
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
+  textInputContainer: {
+    marginTop: 30,
+    marginLeft: 20,
+    marginRight: 20,
+    borderRadius: 10,
+    borderColor: 'black',
+    borderWidth: 1,
+    justifyContent: 'flex-end',
   },
-  highlight: {
-    fontWeight: '700',
+  textInput: {
+    borderWidth: 1,
+    borderRadius: 5,
+    height: 30,
+    margin: 10,
+    backgroundColor: 'pink',
+  },
+  input: {
+    height: 40,
+    margin: 12,
+    borderWidth: 1,
+    padding: 10,
   },
 });
-
 export default App;
