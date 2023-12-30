@@ -27,6 +27,7 @@ import {
   retrieveData,
   deleteItem,
   deleteTable,
+  executeSqlFromFile,
 } from './src/service/db-service';
 
 const App = () => {
@@ -35,19 +36,19 @@ const App = () => {
   const [data, setData] = React.useState([]);
   const [number, onChangeNumber] = React.useState('');
 
-  const loadDataCallback = useCallback(async () => {
-    try {
-      const db = await getDBConnection();
+  // const loadDataCallback = useCallback(async () => {
+  //   try {
+  //     const db = await getDBConnection();
 
-      console.log('DB ', db);
-      await createTable(db);
-    } catch (error) {
-      console.error('ERROR: ', error);
-    }
-  }, []);
-  useEffect(() => {
-    loadDataCallback();
-  }, [loadDataCallback]);
+  //     console.log('DB ', db);
+  //     await createTable(db);
+  //   } catch (error) {
+  //     console.error('ERROR: ', error);
+  //   }
+  // }, []);
+  // useEffect(() => {
+  //   loadDataCallback();
+  // }, [loadDataCallback]);
 
   const saveData = async () => {
     if (text.length == 0) {
@@ -55,16 +56,22 @@ const App = () => {
     } else {
       try {
         const db = await getDBConnection();
-        const jsonData = {
-          email: 'support@autope.in',
-          mobile: '0124-4842222',
-          time: 'Mon - Fri (10Am - 6Pm)',
-        };
+        await createTable(db, 'route');
 
         // Convert JSON object to string
-        const jsonString = JSON.stringify(jsonData);
-        console.log(jsonString);
-        insertData(db, jsonString);
+        const sqlFilePath = 'src/components/populateDb.sql';
+
+        executeSqlFromFile(db, sqlFilePath)
+          .then(() => {
+            console.log('SQL commands executed successfully');
+          })
+          .catch(err => {
+            console.error(err);
+          });
+
+        return () => {
+          db.close();
+        };
       } catch (error) {
         console.error('Error inserting data');
       }
@@ -73,7 +80,7 @@ const App = () => {
 
   const getData = async () => {
     const db = await getDBConnection();
-    const data = await retrieveData(db);
+    const data = await retrieveData(db, 'route');
     console.log('Retrieved Data: ', data);
     setData(data);
   };
