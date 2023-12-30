@@ -39,24 +39,6 @@ export const createTable = async (db: SQLiteDatabase) => {
   });
 };
 
-// export const getTodoItems = async (db: SQLiteDatabase): Promise<ToDoItem[]> => {
-//   try {
-//     const todoItems: ToDoItem[] = [];
-//     const results = await db.executeSql(
-//       `SELECT rowid as id,value FROM ${tableName}`,
-//     );
-//     results.forEach(result => {
-//       for (let index = 0; index < result.rows.length; index++) {
-//         todoItems.push(result.rows.item(index));
-//       }
-//     });
-//     return todoItems;
-//   } catch (error) {
-//     console.error(error);
-//     throw Error('Failed to get todoItems !!!');
-//   }
-// };
-
 export const retrieveData = (db: SQLiteDatabase): Promise<any> => {
   return new Promise((resolve, reject) => {
     db.transaction(
