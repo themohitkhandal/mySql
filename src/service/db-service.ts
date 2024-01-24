@@ -1,3 +1,4 @@
+import {readFile} from 'react-native-fs';
 import {
   enablePromise,
   openDatabase,
@@ -10,19 +11,28 @@ enablePromise(true);
 
 export const getDBConnection = async () => {
   return openDatabase(
-    {name: 'local', location: 'default'},
-    () => {},
+    {name: 'dmrc.db', createFromLocation: '~www/dmrc.db'},
+    res => {
+      console.log('Success opening DB!');
+    },
     error => {
-      console.log(error);
+      console.log('Error while opening DB: ', error);
     },
   );
 };
 
 export const createTable = async (db: SQLiteDatabase, tableName: string) => {
   // create table if not exists
-  let query: any
-  if(tableName = "route") {
+  let query: any;
+  if (tableName == 'route') {
     query = `CREATE TABLE IF NOT EXISTS route(route_name text primary key, optimalApprovedLine text not null);`;
+  } else if (tableName == 'tbl_user') {
+    query = `CREATE TABLE IF NOT EXISTS tbl_user (
+      user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_name TEXT,
+      user_contact TEXT,
+      user_address TEXT
+    );`;
   } else {
     query = `CREATE TABLE IF NOT EXISTS  ${tableName} (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT)`;
   }
@@ -38,62 +48,75 @@ export const createTable = async (db: SQLiteDatabase, tableName: string) => {
       (tx, results) => {
         console.log('Table created successfully', results);
 
-        isCreated = true
+        isCreated = true;
       },
       error => {
         console.error('Error creating table:', error);
-        isCreated = false
+        isCreated = false;
       },
     );
   });
 
-  return isCreated
+  return isCreated;
 };
 
-export const retrieveData = (db: SQLiteDatabase, tableName :string): Promise<any> => {
+export const retrieveData = (
+  db: SQLiteDatabase,
+  tableName: string,
+): Promise<any> => {
   return new Promise((resolve, reject) => {
-    db.transaction(
-      tx => {
-        tx.executeSql(
-          `SELECT * FROM ${tableName}`,
-          [],
-          (_, results) => {
-            const len = results.rows.length;
-
-            const jsonDataArray: any = [];
-
-            for (let i = 0; i < len; i++) {
-              const row = results.rows.item(i);
-              const jsonData = JSON.parse(row.data);
-              console.log('jsonData', jsonData);
-              jsonDataArray.push(jsonData);
-            }
-
-            // if (len > 0) {
-            //   const name = results.rows.item(0).data;
-            //   console.log('Retrieved JSON data:', name);
-            // }
-            resolve(jsonDataArray);
-          },
-          error => {
-            console.error('Error retrieving data:', error);
-            reject(error);
-          },
-        );
-      },
-      error => {
-        console.error('Error opening transaction:', error);
-        reject(error);
-      },
-    );
+    try {
+      db.transaction(
+        tx => {
+          tx.executeSql(
+            `SELECT * FROM ${tableName} LIMIT 1`,
+            [],
+            function (tx, res) {
+              // Modify this accordingly
+              const len = res.rows.length;
+              let data;
+              for (let i = 0; i < len; i++) {
+                const row = res.rows.item(i);
+                console.log('row', row.route_name);
+                data = `RouteName: ${row.route_name}, Optimal: ${row.optimalApprovedLine}`;
+                console.log(
+                  `RouteName: ${row.route_name}, Optimal: ${row.optimalApprovedLine}`,
+                );
+              }
+              resolve(data);
+              console.log('item:', data);
+            },
+            error => {
+              console.error('Error retrieving data:', error);
+              reject(error);
+            },
+          );
+        },
+        error => {
+          console.error('Error opening transaction:', error);
+          reject(error);
+        },
+      );
+    } catch (error) {
+      console.error('Error in retrieve data');
+    }
   });
 };
 
-export const insertData = async (db: SQLiteDatabase, data: any) => {
+export const insertData = async (
+  db: SQLiteDatabase,
+  data: any,
+  tableName: string,
+) => {
   await db.transaction(async tx => {
+    const values = Object.values(data);
+    const placeholders = values.map(() => '?').join(', ');
+
     tx.executeSql(
-      `INSERT INTO ${tableName} (data) VALUES (?)`,
-      [data],
+      `INSERT INTO ${tableName} (${Object.keys(data).join(
+        ', ',
+      )}) VALUES (${placeholders})`,
+      values,
       () => {
         console.log('Data inserted successfully');
       },
@@ -125,32 +148,58 @@ export const deleteTable = async (db: SQLiteDatabase) => {
   });
 };
 
-export const executeSqlFromFile = async (db: any, filePath: any) => {
+export const executeSqlFromFile = async (db: any) => {
   try {
-    const sqlStatements = await fetch(filePath).then((response) => response.text());
-  //   RNFS.readFile(sqlFilePath, 'utf8')
-  // .then((sqlFileContent: any) => {
-  //   console.log(sqlFileContent);
-  // })
-  // .catch((error: any) => {
-  //   console.error('Error reading the SQL file:', error);
-  // });
+    const sqlScript = await readFile('../assets/test.txt', 'utf8');
+    console.log(sqlScript);
 
-    await executeSql(db, sqlStatements);
+    db.transaction(
+      (tx: {
+        executeSql: (
+          arg0: string,
+          arg1: never[],
+          arg2: () => void,
+          arg3: (error: any) => void,
+        ) => void;
+      }) => {
+        tx.executeSql(
+          sqlScript,
+          [],
+          () => {
+            console.log('Data inserted successfully from file');
+          },
+          (error: any) => {
+            console.error('Error executing script:', error);
+          },
+        );
+      },
+    );
   } catch (error) {
-    console.error('Error executing SQL from file:', error);
+    console.error('Error reading SQL script file:', error);
   }
 };
 
-const executeSql = (db: { transaction: (arg0: (tx: any) => void) => void; }, sql: any) => {
+const executeSql = (
+  db: {transaction: (arg0: (tx: any) => void) => void},
+  sql: any,
+) => {
   return new Promise((resolve, reject) => {
-    db.transaction((tx: { executeSql: (arg0: any, arg1: never[], arg2: (_: any, result: any) => void, arg3: (_: any, error: any) => void) => void; }) => {
-      tx.executeSql(
-        sql,
-        [],
-        (_: any, result: unknown) => resolve(result),
-        (_: any, error: any) => reject(error)
-      );
-    });
+    db.transaction(
+      (tx: {
+        executeSql: (
+          arg0: any,
+          arg1: never[],
+          arg2: (_: any, result: any) => void,
+          arg3: (_: any, error: any) => void,
+        ) => void;
+      }) => {
+        tx.executeSql(
+          sql,
+          [],
+          (_: any, result: unknown) => resolve(result),
+          (_: any, error: any) => reject(error),
+        );
+      },
+    );
   });
 };

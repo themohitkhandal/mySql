@@ -22,12 +22,8 @@ import {
 } from 'react-native';
 import {
   getDBConnection,
-  createTable,
-  insertData,
   retrieveData,
   deleteItem,
-  deleteTable,
-  executeSqlFromFile,
 } from './src/service/db-service';
 
 const App = () => {
@@ -36,53 +32,48 @@ const App = () => {
   const [data, setData] = React.useState([]);
   const [number, onChangeNumber] = React.useState('');
 
-  // const loadDataCallback = useCallback(async () => {
-  //   try {
-  //     const db = await getDBConnection();
-
-  //     console.log('DB ', db);
-  //     await createTable(db);
-  //   } catch (error) {
-  //     console.error('ERROR: ', error);
-  //   }
-  // }, []);
-  // useEffect(() => {
-  //   loadDataCallback();
-  // }, [loadDataCallback]);
-
   const saveData = async () => {
-    if (text.length == 0) {
-      Alert.alert('Warning', 'Please write your data.');
-    } else {
-      try {
-        const db = await getDBConnection();
-        await createTable(db, 'route');
+    try {
+      const db = await getDBConnection();
 
-        // Convert JSON object to string
-        const sqlFilePath = 'src/components/populateDb.sql';
+      const dataToInsert = {
+        user_name: 'John Doe',
+        user_contact: '123-456-7890',
+        user_address: '123 Main St',
+      };
 
-        executeSqlFromFile(db, sqlFilePath)
-          .then(() => {
-            console.log('SQL commands executed successfully');
-          })
-          .catch(err => {
-            console.error(err);
-          });
+      // await createTable(db, 'tbl_user')
 
-        return () => {
-          db.close();
-        };
-      } catch (error) {
-        console.error('Error inserting data');
-      }
+      // await insertData(db, dataToInsert, 'tbl_user');
+
+      // Convert JSON object to string
+      // const sqlFilePath = 'src/components/populateDb.sql';
+
+      // executeSqlFromFile(db, sqlFilePath)
+      //   .then(() => {
+      //     console.log('SQL commands executed successfully');
+      //   })
+      //   .catch(err => {
+      //     console.error(err);
+      //   });
+
+      return () => {
+        db.close();
+      };
+    } catch (error) {
+      console.error('Error inserting data');
     }
   };
 
   const getData = async () => {
-    const db = await getDBConnection();
-    const data = await retrieveData(db, 'route');
-    console.log('Retrieved Data: ', data);
-    setData(data);
+    try {
+      const db = await getDBConnection();
+      const data = await retrieveData(db, 'route');
+      console.log('Retrieved Data: ', data);
+      setData(data);
+    } catch (error) {
+      console.error('Error in getData', error);
+    }
   };
 
   const deleteData = async () => {
@@ -90,6 +81,15 @@ const App = () => {
     await deleteItem(db);
     setData('');
   };
+
+  // const saveFromFile = async () => {
+  //   const db = await getDBConnection();
+  //   executeSqlFromFile(db)
+  // }
+
+  // useEffect(() => {
+  //   saveFromFile()
+  // }, [])
 
   return (
     <SafeAreaView>
